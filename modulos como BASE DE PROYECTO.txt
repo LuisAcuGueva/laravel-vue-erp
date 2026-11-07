@@ -1,0 +1,33 @@
+configurador
+cuenta
+mantenimiento
+ - sedes
+ - áreas
+ - roles
+ - usuarios
+ - Inventario -> categorías, unidades, almacenes, motivos de notas de almacen
+ - marcas
+ - modelos
+ - empleados
+ - Finanzas --> TODOS LOS MODULOS DENTRO DE FINANZAS
+ - Horarios
+Caja
+ - apertura/cierre
+ - consulta caja
+ - mov entre cajas
+Bancos
+ - apertura/cierre
+ - consulta banco
+ - trans entre bancos
+proveedores
+compras -> TODOS LOS MODULOS DENTRO DE COMPRAS
+ventas -> TODOS LOS MODULOS DENTRO DE VENTAS
+promociones
+clientes
+citas
+inventario
+notas de almacen
+stock
+Kardex
+catalogo maestro
+

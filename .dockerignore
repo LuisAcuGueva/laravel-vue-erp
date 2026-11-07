@@ -1,0 +1,20 @@
+.git
+.github
+.agents
+.claude
+*.log
+
+# Backend
+back-laravel/vendor
+back-laravel/.env
+back-laravel/.phpunit.result.cache
+back-laravel/storage/*.key
+back-laravel/storage/framework/cache/*
+back-laravel/storage/framework/sessions/*
+back-laravel/storage/framework/views/*
+back-laravel/storage/logs/*
+
+# Frontend
+front-vue/node_modules
+front-vue/dist
+front-vue/.env

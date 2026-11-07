@@ -1,0 +1,102 @@
+# =============================================================
+#  Monorepo: Laravel (back-laravel) + Vue 3 / Vite (front-vue)
+# =============================================================
+
+# ---------- Variables de entorno / secretos ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+auth.json
+
+# ---------- Dependencias ----------
+node_modules/
+vendor/
+.pnpm-store/
+.yarn/
+.turbo/
+
+# ---------- Laravel (back-laravel) ----------
+back-laravel/public/build/
+back-laravel/public/hot
+back-laravel/public/storage
+back-laravel/storage/*.key
+back-laravel/storage/pail/
+back-laravel/storage/app/*
+!back-laravel/storage/app/.gitignore
+back-laravel/storage/framework/cache/*
+back-laravel/storage/framework/sessions/*
+back-laravel/storage/framework/testing/*
+back-laravel/storage/framework/views/*
+!back-laravel/storage/framework/**/.gitignore
+back-laravel/storage/logs/*
+!back-laravel/storage/logs/.gitignore
+back-laravel/bootstrap/cache/*.php
+.phpunit.result.cache
+.phpunit.cache/
+.php-cs-fixer.cache
+.phpactor.json
+Homestead.json
+Homestead.yaml
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
+# ---------- Vue / Vite (front-vue) ----------
+dist/
+dist-ssr/
+*.local
+front-vue/src/plugins/iconify/icons.css
+front-vue/public/mockServiceWorker.js
+.vite/
+coverage/
+/front-vue/cypress/videos/
+/front-vue/cypress/screenshots/
+
+# ---------- Logs ----------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ---------- Docker ----------
+docker/test/data/
+*.sqlite
+*.sqlite-journal
+
+# ---------- Editores / IDE ----------
+.idea/
+.fleet/
+.nova/
+.zed/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/*.code-snippets
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ---------- Sistema operativo ----------
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ---------- Herramientas de IA ----------
+.claude/settings.local.json
+# graphify: se versionan graph.json y GRAPH_REPORT.md; se ignoran caché y temporales
+graphify-out/cache/
+graphify-out/.graphify_*
+graphify-out/cost.json
+
+# ---------- JIRA ----------
+jira/
+
+# ---------- Playwright ----------
+.playwright-mcp

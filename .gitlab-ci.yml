@@ -1,0 +1,109 @@
+stages:
+  - lint
+  - analyze
+  - test
+  - build
+
+default:
+  interruptible: true
+
+variables:
+  POSTGRES_DB: laravel_test
+  POSTGRES_USER: laravel
+  POSTGRES_PASSWORD: secret
+  POSTGRES_HOST_AUTH_METHOD: trust
+
+# Cache global de pnpm y composer
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - back-laravel/vendor/
+    - front-vue/node_modules/
+    - .pnpm-store/
+
+# --------------------------------------------------------------------------
+# 1. LINT
+# --------------------------------------------------------------------------
+lint:backend:
+  stage: lint
+  image: php:8.3-cli-alpine
+  before_script:
+    - cd back-laravel
+    - composer install --prefer-dist --no-progress --no-interaction
+  script:
+    - vendor/bin/pint --test
+
+lint:frontend:
+  stage: lint
+  image: node:20-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm --filter front-vue run lint
+
+# --------------------------------------------------------------------------
+# 2. ANALYZE
+# --------------------------------------------------------------------------
+analyze:backend:
+  stage: analyze
+  image: php:8.3-cli-alpine
+  before_script:
+    - cd back-laravel
+    - composer install --prefer-dist --no-progress --no-interaction
+  script:
+    - vendor/bin/phpstan analyse
+
+# --------------------------------------------------------------------------
+# 3. TEST
+# --------------------------------------------------------------------------
+test:backend:
+  stage: test
+  image: php:8.3-cli-alpine
+  services:
+    - postgres:16-alpine
+  variables:
+    DB_CONNECTION: pgsql
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_DATABASE: laravel_test
+    DB_USERNAME: laravel
+    DB_PASSWORD: secret
+  before_script:
+    - apk add --no-cache postgresql-client postgresql-dev
+    - docker-php-ext-install pdo pdo_pgsql
+    - cd back-laravel
+    - composer install --prefer-dist --no-progress --no-interaction
+    - cp .env.example .env
+    - php artisan key:generate
+    - php artisan migrate:fresh --seed
+  script:
+    - php artisan test
+
+test:frontend:
+  stage: test
+  image: node:20-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm --filter front-vue run test
+
+# --------------------------------------------------------------------------
+# 4. BUILD
+# --------------------------------------------------------------------------
+build:frontend:
+  stage: build
+  image: node:20-alpine
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@latest --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - pnpm --filter front-vue run build
+  artifacts:
+    paths:
+      - front-vue/dist/
+    expire_in: 1 week

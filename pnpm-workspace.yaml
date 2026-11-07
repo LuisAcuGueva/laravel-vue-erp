@@ -1,0 +1,11 @@
+packages:
+  - "back-laravel"
+  - "front-vue"
+
+# Aprobación de scripts de build de dependencias.
+allowBuilds:
+  "@scarf/scarf": true
+  esbuild: true
+  msw: true
+  unrs-resolver: true
+  vue-demi: true

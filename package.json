@@ -1,0 +1,21 @@
+{
+  "name": "template-laravel-vue",
+  "version": "1.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "12.9.1"
+    }
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "turbo": "^2.11.7"
+  }
+}

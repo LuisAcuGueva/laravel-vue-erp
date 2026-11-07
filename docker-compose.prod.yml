@@ -1,0 +1,152 @@
+name: template-modular-prod
+
+services:
+  # ============================================================================
+  # PostgreSQL Database (Production)
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: template_pg_prod
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-laravel_prod}
+      POSTGRES_USER: ${DB_USERNAME:-laravel_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD es requerida para el entorno de produccion}
+    volumes:
+      - pgdata_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-laravel_user} -d ${DB_DATABASE:-laravel_prod}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - prod-network
+
+  # ============================================================================
+  # Laravel Backend - PHP 8.3 FPM (Production)
+  # ============================================================================
+  back-app:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    container_name: template_app_prod
+    restart: always
+    environment:
+      APP_NAME: ${APP_NAME:-Laravel}
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?APP_KEY es requerida para produccion}
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-laravel_prod}
+      DB_USERNAME: ${DB_USERNAME:-laravel_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+    volumes:
+      - storage_prod:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - prod-network
+
+  # ============================================================================
+  # Unified Nginx Web Server (Frontend Vue SPA + Backend API Reverse Proxy)
+  # ============================================================================
+  web:
+    build:
+      context: .
+      dockerfile: docker/nginx/Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: template_web_prod
+    restart: always
+    ports:
+      - "${PROD_PORT:-80}:80"
+    depends_on:
+      - back-app
+    volumes:
+      - storage_prod:/var/www/html/public/storage:ro
+    networks:
+      - prod-network
+
+  # ============================================================================
+  # Laravel Queue Worker (Production)
+  # ============================================================================
+  back-queue:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    container_name: template_queue_prod
+    restart: always
+    command: php artisan queue:work --tries=3 --timeout=90 --sleep=3 --max-time=3600
+    environment:
+      APP_NAME: ${APP_NAME:-Laravel}
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?APP_KEY es requerida para produccion}
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-laravel_prod}
+      DB_USERNAME: ${DB_USERNAME:-laravel_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+    volumes:
+      - storage_prod:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - prod-network
+
+  # ============================================================================
+  # Laravel Task Scheduler (Production)
+  # ============================================================================
+  back-scheduler:
+    build:
+      context: .
+      dockerfile: docker/php/Dockerfile
+      target: prod
+    container_name: template_scheduler_prod
+    restart: always
+    command: php artisan schedule:work
+    environment:
+      APP_NAME: ${APP_NAME:-Laravel}
+      APP_ENV: production
+      APP_KEY: ${APP_KEY:?APP_KEY es requerida para produccion}
+      APP_DEBUG: "false"
+      APP_URL: ${APP_URL:-http://localhost}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-laravel_prod}
+      DB_USERNAME: ${DB_USERNAME:-laravel_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      SESSION_DRIVER: array
+      QUEUE_CONNECTION: database
+      CACHE_STORE: database
+    volumes:
+      - storage_prod:/var/www/html/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - prod-network
+
+volumes:
+  pgdata_prod:
+  storage_prod:
+
+networks:
+  prod-network:
+    driver: bridge

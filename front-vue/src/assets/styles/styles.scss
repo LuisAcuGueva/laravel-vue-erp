@@ -1,0 +1,19 @@
+// Write your overrides
+
+// Paneles laterales con `scrollable-content`: la cabecera queda fija y el
+// cuerpo (último hijo) se desplaza. Sin esto el contenedor de Vuetify tiene
+// `overflow: hidden` y el contenido que crece (p. ej. Acceso al Sistema en
+// Empleados) queda cortado sin scroll.
+.scrollable-content.v-navigation-drawer .v-navigation-drawer__content > :last-child {
+  flex: 1 1 auto;
+  min-block-size: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+// Mientras un panel lateral temporal está abierto, la página no se desplaza:
+// solo queda el scroll del panel. `VNavigationDrawer temporary` no bloquea el
+// scroll del documento como sí lo hace `VDialog`.
+html:has(.scrollable-content.v-navigation-drawer--temporary.v-navigation-drawer--active) {
+  overflow: hidden;
+}

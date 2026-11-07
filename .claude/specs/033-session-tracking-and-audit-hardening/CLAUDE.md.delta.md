@@ -1,0 +1,25 @@
+# 033 · session-tracking-and-audit-hardening — Delta de reglas
+> **Instrucciones:** este archivo contiene **solo las reglas duras nuevas** que este spec agrega al repo. Al cerrar el spec se mergean en [.agents/rules/](../../../.agents/rules/) (archivo existente o uno nuevo con frontmatter `trigger` / `description`), según el destino indicado en cada sección.
+>
+> **Origen:** [requirements.md](./requirements.md), [design.md](./design.md), [todo.md](./todo.md).
+>
+---
+## (+ en ".agents/rules/auth-session.md") Sesiones de dispositivo y refresh tokens
+
+- Una sesión de dispositivo vive en `sessions` (`App\Modules\Auth\Models\Session`); `refresh_tokens` solo referencia `session_id` y nunca vuelve a tener columnas `ip_address`/`user_agent` propias. Toda rotación de refresh token reutiliza el `session_id` de la fila que rota; nunca crea una `Session` nueva.
+- Revocar una sesión (`logout`, `revokeOtherSessions`, cambio de contraseña) siempre bloquea la fila de `sessions` con `lockForUpdate()` antes de leer su estado y revoca en la misma transacción la sesión y su refresh token activo. `rotateRefreshToken()` rechaza con 401 cualquier rotación cuya `Session.revoked_at` no sea nula, incluso dentro del periodo de gracia de la fila de `refresh_tokens`.
+- El claim `sid` del access token JWT es la única fuente para resolver la sesión activa de la request; prohibido resolver `session_id` consultando `refresh_tokens`/`sessions` en cada request autenticada (ya viaja validado en el token).
+- `SESSION_DRIVER` es `array` en todos los entornos (`.env`, `.env.example`, los 3 servicios de `docker-compose.yml` y `docker-compose.prod.yml`), nunca `database`: la tabla `sessions` de dominio tiene un esquema incompatible con el que espera el driver `database` de Laravel, y `Auth::login()` toca el almacén de sesión incluso fuera de un request HTTP (sin middleware `web`), por lo que `database` rompe cualquier código que llame `auth()->login()`/`Auth::login()` (ej. seeders) con un error de tipo UUID.
+
+## (+ en ".agents/rules/multi-branch.md") AuditContext: branch_id y session_id en activity log
+
+- `App\Modules\Audit\Models\Activity` nunca depende directamente de `App\Support\Branch\ActiveBranch`; lee `App\Support\Audit\AuditContext` (neutral), poblado explícitamente por `JwtAuthenticate` (`session_id`) y por el middleware `branch` (`branch_id`). Un servicio de dominio nunca llama `app(AuditContext::class)` para leer, solo la capa de presentación la escribe; un job que necesite `session_id`/`causer` explícito en su log los recibe serializados en su payload al encolar, nunca los resuelve de un singleton de request.
+- `branch_id` y `session_id` de una actividad son **columnas propias e indexadas** de `activity_log` (no claves dentro de `properties`): permiten filtrar/paginar auditoría por sede o por sesión sin escanear JSON fila por fila. `branch_id` se resuelve primero desde `$activity->subject->branch_id` si el modelo auditado tiene esa columna; `AuditContext::branchId()` es solo el *fallback* para subjects sin `branch_id` propio. Esto permite que actividades generadas en jobs/comandos (sin contexto de request) sigan llevando `branch_id` correcto sin tener que threadearlo manualmente. Prohibido volver a guardarlos dentro de `properties`.
+
+## (+ en ".agents/rules/graphify.md" — no aplica; nuevo archivo ".agents/rules/activity-log.md") Estandarización del activity log
+
+- Todo modelo de dominio con `use LogsActivity` tiene su alias `snake_case` registrado en `Relation::morphMap()` del `ServiceProvider` de su módulo; prohibido que dos claves de `morphMap` apunten a la misma clase (alias duplicado/muerto) y prohibido dejar un modelo auditable sin alias (cae a FQCN). Un test de regresión (`MorphMapIntegrityTest`) lo verifica en CI.
+- Toda llamada manual a `activity()` (fuera del ciclo automático de `LogsActivity`) declara `->causedBy($causer)` de forma explícita, nunca depende del auth driver implícito de Spatie (ese driver no resuelve nada en jobs/comandos). Un servicio que registra actividad manual recibe el causer como parámetro tipado; no lo infiere de `auth()->user()` dentro del servicio.
+- `event` es siempre un slug de máquina estable en `snake_case` (nunca `NULL` en una llamada manual); `description` es la frase humana y puede diferir de `event`, pero ambas columnas se informan siempre juntas — nunca se deja `event` vacío confiando en que `description` lo sustituya.
+- Una actividad generada por un proceso del sistema sin causer humano (reacción a un sistema externo, no continuación de una acción de usuario) deja `causer_type`/`causer_id` en `NULL` pero agrega `'system' => true` a `properties`; un `NULL` sin esa marca se interpreta como un bug pendiente de corregir, no como una actividad de sistema intencional.
+- Operaciones de negocio que generan varias actividades relacionadas en una sola transacción (p. ej. emisión de un documento que toca varias entidades) se agrupan con `activity()->withBatch()`/`batch_uuid`; no se dejan sueltas sin agrupar cuando pertenecen al mismo evento de negocio.

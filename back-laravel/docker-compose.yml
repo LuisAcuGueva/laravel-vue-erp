@@ -1,0 +1,27 @@
+# Base de datos PostgreSQL compartida por laravel-mvc y laravel-clean.
+# Ambos proyectos usan el mismo nombre de proyecto de Compose ("name" abajo),
+# así que levantar cualquiera de los dos crea o reutiliza el MISMO contenedor.
+# Los valores se leen del .env del proyecto; deben coincidir en ambos proyectos.
+name: laravel-shared-db
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: laravel_pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-laravel_shared}
+      POSTGRES_USER: ${DB_USERNAME:-laravel}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-laravel} -d ${DB_DATABASE:-laravel_shared}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
